@@ -3,3 +3,8 @@
 *.md
 LICENSE
 docker-compose.yaml
+# Never bake a local .env into the image: it would silently override the
+# platform's environment variables, since settings.py calls read_env(overwrite=True).
+.env
+media/
+staticfiles/

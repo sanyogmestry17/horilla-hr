@@ -260,3 +260,28 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Uploaded files must not live on the container filesystem: the hosting
+# platform gives each deploy a fresh disk, so employee documents, payslips and
+# profile images would disappear on every restart. Route them to S3-compatible
+# object storage instead when a bucket is configured.
+if env("AWS_STORAGE_BUCKET_NAME", default=None):
+    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
+    AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")
+    AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME")
+    AWS_S3_ENDPOINT_URL = env("AWS_S3_ENDPOINT_URL")
+    AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="ap-south-1")
+
+    # Supabase Storage speaks the S3 API but only with path-style addressing and
+    # SigV4, and it rejects requests that carry an ACL.
+    AWS_S3_ADDRESSING_STYLE = "path"
+    AWS_S3_SIGNATURE_VERSION = "s3v4"
+    AWS_DEFAULT_ACL = None
+
+    # HR files are personal data: serve them as expiring signed URLs rather than
+    # public objects, and never let one upload clobber another.
+    AWS_QUERYSTRING_AUTH = True
+    AWS_QUERYSTRING_EXPIRE = env.int("AWS_QUERYSTRING_EXPIRE", default=3600)
+    AWS_S3_FILE_OVERWRITE = False
